@@ -399,7 +399,13 @@ class PyUI(unicode):
         return Window( self.name().split('|')[0] )
 
     delete = _factories.functionFactory( 'deleteUI', rename='delete' )
-    rename = _factories.functionFactory( 'renameUI', rename='rename' )
+    
+    def rename(self,newName):
+        newName = str(newName)
+        finalName = cmds.renameUI(self,newName)
+        print "# Result (Renamed to): u'%s' #"%finalName
+        self = self.parent()+finalName
+        
     type = objectTypeUI
 
     @classmethod
