@@ -362,10 +362,13 @@ class PyUI(unicode):
                         if name not in cmds.lsUI( long=True,editors=True):
                             raise
 
-
         # correct for optionMenu
         if newcls == PopupMenu and cmds.optionMenu( name, ex=1 ):
             newcls = OptionMenu
+
+        # Additional attribute for storing actual UI full path
+        newcls.fullPathName = name
+            
         return unicode.__new__(newcls,name)
 
     @staticmethod
@@ -379,9 +382,13 @@ class PyUI(unicode):
         return not name or create or ( 'q' not in kwargs and kwargs.get('parent', kwargs.get('p', None)) )
 
     def __repr__(self):
-        return u"ui.%s('%s')" % (self.__class__.__name__, self)
+        return u"ui.%s('%s')" % (self.__class__.__name__, self.fullPathName)
+    
     def parent(self):
-        buf = unicode(self).split('|')[:-1]
+        '''
+            Returns the full path of the UI's parent (does not use )
+        '''
+        buf = unicode(self.fullPathName).split('|')[:-1]
         if len(buf)==2 and buf[0] == buf[1] and _versions.current() < _versions.v2011:
             # pre-2011, windows with menus can have a strange name:
             # ex.  window1|window1|menu1
@@ -390,21 +397,27 @@ class PyUI(unicode):
             return None
         return PyUI( '|'.join(buf) )
     getParent = parent
-
+    
+    def setParent(self, newParent):
+        # newFullPathName = cmds.control(self, edit=True, parent=newParent)
+        self.fullPathName = cmds.control(self, edit=True, parent=newParent)
+        return self.fullPathName
+    
     def shortName(self):
-        return unicode(self).split('|')[-1]
+        return unicode(self.fullPathName).split('|')[-1]
+    
     def name(self):
-        return unicode(self)
+        return unicode(self.fullPathName)
+    
     def window(self):
         return Window( self.name().split('|')[0] )
 
     delete = _factories.functionFactory( 'deleteUI', rename='delete' )
     
     def rename(self,newName):
-        newName = str(newName)
         finalName = cmds.renameUI(self,newName)
-        print "# Result (Renamed to): u'%s' #"%finalName
-        self = self.parent()+finalName
+        self.fullPathName.replace(self.shortName(),finalName)
+        return finalName
         
     type = objectTypeUI
 
@@ -559,6 +572,7 @@ class Window(Layout):
     def parent(self):
         return None
     getParent = parent
+    setParent = parent
 
     if _versions.current() >= _versions.v2011:
         asQtObject = toQtWindow
